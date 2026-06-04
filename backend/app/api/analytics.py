@@ -1,0 +1,65 @@
+from fastapi import APIRouter
+from fastapi import Depends
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database.session import get_db
+
+from app.services.analytics_service import (
+    get_summary
+)
+
+from app.services.organization_analytics_service import (
+    organization_stats
+)
+router = APIRouter(
+    prefix="/analytics",
+    tags=["Analytics"]
+)
+
+from app.services.dashboard_service import (
+    get_recent_activity,
+    revenue_trends,
+    user_growth
+)
+
+@router.get("/summary")
+async def analytics_summary(
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_summary(db)
+
+
+@router.get("/organizations")
+async def analytics_organizations(
+    db: AsyncSession = Depends(get_db)
+):
+    return await organization_stats(db)
+    
+@router.get("/activity")
+async def activity_feed():
+    return await get_recent_activity()    
+
+@router.get("/revenue")
+async def revenue_data():
+    return await revenue_trends()
+
+
+@router.get("/growth")
+async def growth_data():
+    return await user_growth()
+
+
+@router.get("/dashboard")
+async def dashboard(
+    db: AsyncSession = Depends(get_db)
+):
+
+    summary = await get_summary(db)
+
+    return {
+        "summary": summary,
+        "revenue": await revenue_trends(),
+        "growth": await user_growth(),
+        "activity": await get_recent_activity()
+    }
