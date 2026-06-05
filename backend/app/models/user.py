@@ -14,7 +14,9 @@ class User(Base):
         default=lambda: str(uuid4())
     )
 
-    name: Mapped[str] = mapped_column(String(255))
+    name: Mapped[str] = mapped_column(
+        String(255)
+    )
 
     email: Mapped[str] = mapped_column(
         String(255),
@@ -24,6 +26,11 @@ class User(Base):
 
     password_hash: Mapped[str] = mapped_column(
         String(255)
+    )
+
+    auth_provider: Mapped[str] = mapped_column(
+        String(50),
+        default="local"
     )
 
     is_active: Mapped[bool] = mapped_column(

@@ -40,11 +40,12 @@ async def register_user(
     )
 
     user = await create_user(
-        db,
-        name,
-        email,
-        hashed_password
-    )
+    db,
+    name,
+    email,
+    hashed_password,
+    "local"
+   )
 
     return user
 

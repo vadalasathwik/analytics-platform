@@ -19,12 +19,14 @@ async def create_user(
     db: AsyncSession,
     name: str,
     email: str,
-    password_hash: str
+    password_hash: str,
+    auth_provider: str = "local"
 ):
     user = User(
         name=name,
         email=email,
-        password_hash=password_hash
+        password_hash=password_hash,
+        auth_provider=auth_provider
     )
 
     db.add(user)
