@@ -12,11 +12,11 @@ export default function DashboardPage() {
   const [topEvents, setTopEvents] = useState<any[]>([]);
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
 
-const [organizations, setOrganizations] =
-  useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [selectedOrg, setSelectedOrg] = useState("");
 
-const [selectedOrg, setSelectedOrg] =
-  useState("");
+  const [loadingState, setLoadingState] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   function handleLogout() {
     localStorage.removeItem("access_token");
@@ -25,122 +25,181 @@ const [selectedOrg, setSelectedOrg] =
     window.location.href = "/";
   }
 
-useEffect(() => {
-  async function loadDashboard() {
-    console.log("NEW DASHBOARD CODE LOADED");
-    try {
-      const token =
-        localStorage.getItem("access_token");
+  useEffect(() => {
+    async function loadDashboard() {
+      console.log("NEW DASHBOARD CODE LOADED");
+      setLoadingState("loading");
+      setErrorMessage("");
 
-      if (!token) return;
+      try {
+        const token = localStorage.getItem("access_token");
+        console.log("access_token exists:", !!token);
 
-      const headers = {
-        Authorization: `Bearer ${token}`,
-      };
-
-      const orgRes = await fetch(`${API_URL}/organizations/`, {
-        headers,
-      });
-
-      if (!orgRes.ok) {
-        if (orgRes.status === 401) {
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("refresh_token");
-          window.location.href = "/login";
+        if (!token) {
+          setErrorMessage("No access_token found. Please login.");
+          setLoadingState("error");
           return;
         }
-        throw new Error(`Failed to load organizations: ${orgRes.status}`);
-      }
 
-      const orgs = await orgRes.json();
+        const headers = {
+          Authorization: `Bearer ${token}`,
+        };
 
-      if (!orgs.length) return;
-
-      const orgId = orgs[0].id;
-
-      setSelectedOrg(orgId);
-
-      const summaryRes = await fetch(
-  `${API_URL}/analytics/summary`,
-  { headers }
-);
-
-      if (!summaryRes.ok) {
-        if (summaryRes.status === 401) {
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("refresh_token");
-          window.location.href = "/login";
+        // ORGANIZATIONS
+        const orgUrl = `${API_URL}/organizations/`;
+        console.log("Requesting organizations ->", orgUrl);
+        let orgRes: Response;
+        try {
+          orgRes = await fetch(orgUrl, { headers });
+          console.log("organizations status:", orgRes.status);
+        } catch (err) {
+          console.error("organizations fetch error:", err);
+          setErrorMessage("organization fetch failed: network error");
+          setLoadingState("error");
           return;
         }
-        throw new Error(`Failed to load summary: ${summaryRes.status}`);
-      }
 
-      const topEventsRes = await fetch(
-  `${API_URL}/analytics/top-events`,
-  { headers }
-);
-
-      if (!topEventsRes.ok) {
-        if (topEventsRes.status === 401) {
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("refresh_token");
-          window.location.href = "/login";
+        let orgs: any[] = [];
+        try {
+          const orgText = await orgRes.text();
+          console.log("organizations response body:", orgText);
+          orgs = orgText ? JSON.parse(orgText) : [];
+        } catch (err) {
+          console.error("organizations JSON parse error:", err);
+          setErrorMessage("organization fetch failed: invalid JSON");
+          setLoadingState("error");
           return;
         }
-        throw new Error(`Failed to load top events: ${topEventsRes.status}`);
-      }
 
-      const recentEventsRes = await fetch(
-  `${API_URL}/analytics/recent-events`,
-  { headers }
-);
-
-      if (!recentEventsRes.ok) {
-        if (recentEventsRes.status === 401) {
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("refresh_token");
-          window.location.href = "/login";
+        if (!Array.isArray(orgs) || orgs.length === 0) {
+          setOrganizations([]);
+          setErrorMessage("No organizations found");
+          setLoadingState("error");
           return;
         }
-        throw new Error(`Failed to load recent events: ${recentEventsRes.status}`);
+
+        setOrganizations(orgs);
+        const orgId = orgs[0].id;
+        setSelectedOrg(orgId);
+
+        // SUMMARY
+        const summaryUrl = `${API_URL}/analytics/summary?organization_id=${orgId}`;
+        console.log("Requesting summary ->", summaryUrl);
+        let summaryRes: Response;
+        try {
+          summaryRes = await fetch(summaryUrl, { headers });
+          console.log("summary status:", summaryRes.status);
+        } catch (err) {
+          console.error("summary fetch error:", err);
+          setErrorMessage("summary fetch failed: network error");
+          setLoadingState("error");
+          return;
+        }
+
+        let summaryData: any = null;
+        try {
+          const summaryText = await summaryRes.text();
+          console.log("summary response body:", summaryText);
+          summaryData = summaryText ? JSON.parse(summaryText) : null;
+        } catch (err) {
+          console.error("summary JSON parse error:", err);
+          setErrorMessage("summary fetch failed: invalid JSON");
+          setLoadingState("error");
+          return;
+        }
+
+        // TOP EVENTS
+        const topUrl = `${API_URL}/analytics/top-events?organization_id=${orgId}`;
+        console.log("Requesting top-events ->", topUrl);
+        let topRes: Response;
+        try {
+          topRes = await fetch(topUrl, { headers });
+          console.log("top-events status:", topRes.status);
+        } catch (err) {
+          console.error("top-events fetch error:", err);
+          setErrorMessage("top-events fetch failed: network error");
+          setLoadingState("error");
+          return;
+        }
+
+        let topEventsData: any[] = [];
+        try {
+          const topText = await topRes.text();
+          console.log("top-events response body:", topText);
+          topEventsData = topText ? JSON.parse(topText) : [];
+        } catch (err) {
+          console.error("top-events JSON parse error:", err);
+          setErrorMessage("top-events fetch failed: invalid JSON");
+          setLoadingState("error");
+          return;
+        }
+
+        // RECENT EVENTS
+        const recentUrl = `${API_URL}/analytics/recent-events?organization_id=${orgId}`;
+        console.log("Requesting recent-events ->", recentUrl);
+        let recentRes: Response;
+        try {
+          recentRes = await fetch(recentUrl, { headers });
+          console.log("recent-events status:", recentRes.status);
+        } catch (err) {
+          console.error("recent-events fetch error:", err);
+          setErrorMessage("recent-events fetch failed: network error");
+          setLoadingState("error");
+          return;
+        }
+
+        let recentEventsData: any[] = [];
+        try {
+          const recentText = await recentRes.text();
+          console.log("recent-events response body:", recentText);
+          recentEventsData = recentText ? JSON.parse(recentText) : [];
+        } catch (err) {
+          console.error("recent-events JSON parse error:", err);
+          setErrorMessage("recent-events fetch failed: invalid JSON");
+          setLoadingState("error");
+          return;
+        }
+
+        // set states
+        setSummary(summaryData);
+        setTopEvents(Array.isArray(topEventsData) ? topEventsData : []);
+        setRecentEvents(Array.isArray(recentEventsData) ? recentEventsData : []);
+
+        console.log("summaryData:", summaryData);
+        console.log("topEventsData count:", Array.isArray(topEventsData) ? topEventsData.length : 0);
+        console.log("recentEventsData count:", Array.isArray(recentEventsData) ? recentEventsData.length : 0);
+
+        setLoadingState("success");
+      } catch (err) {
+        console.error("Unexpected dashboard error:", err);
+        setErrorMessage("Unexpected error loading dashboard");
+        setLoadingState("error");
       }
-
-      const summaryData =
-        await summaryRes.json();
-
-      const topEventsData =
-        await topEventsRes.json();
-
-      const recentEventsData =
-        await recentEventsRes.json();
-
-      setSummary(summaryData);
-
-      setTopEvents(
-        Array.isArray(topEventsData)
-          ? topEventsData
-          : []
-      );
-
-      setRecentEvents(
-        Array.isArray(recentEventsData)
-          ? recentEventsData
-          : []
-      );
-    } catch (error) {
-      console.error(
-        "Dashboard Error:",
-        error
-      );
     }
-  }
 
-  loadDashboard();
-}, []);
-  if (!summary) {
+    loadDashboard();
+  }, []);
+  if (loadingState === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center text-xl">
         Loading Dashboard...
+      </div>
+    );
+  }
+
+  if (loadingState === "error") {
+    return (
+      <div className="min-h-screen p-8">
+        <div className="max-w-2xl mx-auto bg-white p-6 rounded shadow">
+          <h2 className="text-2xl font-bold mb-4">Dashboard Error</h2>
+          <p className="text-red-600 mb-4">{errorMessage || "Failed to load dashboard."}</p>
+          <div className="text-sm text-gray-700 mb-2">
+            <strong>Selected org:</strong> {selectedOrg || "(none)"}
+          </div>
+          <div className="text-sm text-gray-700">
+            <strong>Orgs count:</strong> {organizations?.length ?? 0}
+          </div>
+        </div>
       </div>
     );
   }
