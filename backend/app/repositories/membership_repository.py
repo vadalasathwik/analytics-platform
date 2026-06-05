@@ -33,3 +33,32 @@ async def get_memberships(
     )
 
     return result.scalars().all()
+
+async def get_membership(
+    db: AsyncSession,
+    user_id: str,
+    organization_id: str
+):
+    result = await db.execute(
+        select(Membership).where(
+            Membership.user_id == user_id,
+            Membership.organization_id == organization_id
+        )
+    )
+
+    return result.scalar_one_or_none()
+
+
+async def get_membership(
+    db: AsyncSession,
+    user_id: str,
+    organization_id: str
+):
+    result = await db.execute(
+        select(Membership).where(
+            Membership.user_id == user_id,
+            Membership.organization_id == organization_id
+        )
+    )
+
+    return result.scalars().first()

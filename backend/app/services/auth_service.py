@@ -11,9 +11,15 @@ from app.repositories.user_repository import (
 )
 
 from app.auth.jwt_handler import (
-    create_access_token
+    create_access_token,
+    create_refresh_token
 )
 
+from app.auth.jwt_handler import (
+    create_access_token,
+    create_refresh_token,
+    verify_refresh_token
+)
 
 async def register_user(
     db: AsyncSession,
@@ -64,11 +70,39 @@ async def login_user(
     if not valid_password:
         return None
 
-    token = create_access_token(
+    access_token = create_access_token(
         {
             "sub": user.email,
             "user_id": user.id
         }
     )
 
-    return token
+    refresh_token = create_refresh_token(
+        {
+            "sub": user.email,
+            "user_id": user.id
+        }
+    )
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token
+    }
+
+async def refresh_access_token(
+    refresh_token: str
+):
+
+    payload = verify_refresh_token(
+        refresh_token
+    )
+
+    if not payload:
+        return None
+
+    return create_access_token(
+        {
+            "sub": payload["sub"],
+            "user_id": payload["user_id"]
+        }
+    )

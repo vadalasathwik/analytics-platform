@@ -16,11 +16,24 @@ from app.services.auth_service import (
     login_user
 )
 
+from fastapi.security import OAuth2PasswordRequestForm
+
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
 )
 
+from app.schemas.user import (
+    UserCreate,
+    UserLogin,
+    RefreshTokenRequest
+)
+
+from app.services.auth_service import (
+    register_user,
+    login_user,
+    refresh_access_token
+)
 
 @router.post("/register")
 async def register(
@@ -48,14 +61,14 @@ async def register(
 
 @router.post("/login")
 async def login(
-    user: UserLogin,
+    form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db)
 ):
 
     token = await login_user(
         db,
-        user.email,
-        user.password
+        form_data.username,  # email
+        form_data.password
     )
 
     if not token:
@@ -65,6 +78,28 @@ async def login(
         )
 
     return {
-        "access_token": token,
+    "access_token": token["access_token"],
+    "refresh_token": token["refresh_token"],
+    "token_type": "bearer"
+}
+
+
+@router.post("/refresh")
+async def refresh_token(
+    request: RefreshTokenRequest
+):
+
+    access_token = await refresh_access_token(
+        request.refresh_token
+    )
+
+    if not access_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid refresh token"
+        )
+
+    return {
+        "access_token": access_token,
         "token_type": "bearer"
     }
