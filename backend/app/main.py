@@ -13,11 +13,15 @@ from app.api.membership import router as membership_router
 from app.api.analytics import router as analytics_router
 from app.api.users import router as users_router
 from app.api.admin import router as admin_router
-
+from app.api.tenant import router as tenant_router
+from app.api.events import router as events_router
 
 app = FastAPI(
     title="Analytics Platform API"
 )
+
+app.include_router(tenant_router)
+app.include_router(events_router)
 
 # Session middleware required for Google OAuth
 app.add_middleware(
