@@ -8,14 +8,17 @@ import ActivityChart from "@/components/ActivityChart";
 import { API_URL } from "@/lib/api";
 
 export default function DashboardPage() {
-  const [summary, setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<any>({
+    total_events: 0,
+    total_api_keys: 0,
+  });
   const [topEvents, setTopEvents] = useState<any[]>([]);
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
 
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [selectedOrg, setSelectedOrg] = useState("");
 
-  const [loadingState, setLoadingState] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [loadingState, setLoadingState] = useState<"idle" | "loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   function handleLogout() {
@@ -228,7 +231,7 @@ export default function DashboardPage() {
             </h2>
 
             <p className="text-4xl font-bold mt-2">
-              {summary.total_events}
+              {summary?.total_events ?? 0}
             </p>
           </div>
 
@@ -238,7 +241,7 @@ export default function DashboardPage() {
             </h2>
 
             <p className="text-4xl font-bold mt-2">
-              {summary.total_api_keys}
+              {summary?.total_api_keys ?? 0}
             </p>
           </div>
 
