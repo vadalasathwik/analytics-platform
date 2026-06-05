@@ -38,7 +38,7 @@ useEffect(() => {
       };
 
       const orgRes = await fetch(
-        "http://127.0.0.1:8000/organizations/",
+        "https://analytics-platform-production-78b2.up.railway.app",
         {
           headers,
         }
@@ -53,17 +53,18 @@ useEffect(() => {
       setSelectedOrg(orgId);
 
       const summaryRes = await fetch(
-        `http://127.0.0.1:8000/analytics/summary?organization_id=${orgId}`,
+        `https://analytics-platform-production-78b2.up.railway.app`,
         { headers }
       );
 
       const topEventsRes = await fetch(
-        `http://127.0.0.1:8000/analytics/top-events?organization_id=${orgId}`,
+        `https://analytics-platform-production-78b2.up.railway.app`,
         { headers }
       );
 
       const recentEventsRes = await fetch(
-        `http://127.0.0.1:8000/analytics/recent-events?organization_id=${orgId}`,
+        `https://analytics-platform-production-78b2.up.railway.app`,
+        { headers }
         { headers }
       );
 

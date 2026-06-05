@@ -84,7 +84,7 @@ export default function HomePage() {
           className="w-full border p-3 rounded mt-4"
           onClick={() => {
   window.location.href =
-    "http://127.0.0.1:8000/auth/google/login";
+    "https://analytics-platform-production-78b2.up.railway.app";
 }}
         >
           Continue with Google
