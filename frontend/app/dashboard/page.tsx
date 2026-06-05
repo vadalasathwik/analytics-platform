@@ -61,9 +61,9 @@ useEffect(() => {
       setSelectedOrg(orgId);
 
       const summaryRes = await fetch(
-        `${API_URL}/analytics/summary?organization_id=${orgId}`,
-        { headers }
-      );
+  `${API_URL}/analytics/summary`,
+  { headers }
+);
 
       if (!summaryRes.ok) {
         if (summaryRes.status === 401) {
@@ -76,9 +76,9 @@ useEffect(() => {
       }
 
       const topEventsRes = await fetch(
-        `${API_URL}/analytics/top-events?organization_id=${orgId}`,
-        { headers }
-      );
+  `${API_URL}/analytics/top-events`,
+  { headers }
+);
 
       if (!topEventsRes.ok) {
         if (topEventsRes.status === 401) {
@@ -91,9 +91,9 @@ useEffect(() => {
       }
 
       const recentEventsRes = await fetch(
-        `${API_URL}/analytics/recent-events?organization_id=${orgId}`,
-        { headers }
-      );
+  `${API_URL}/analytics/recent-events`,
+  { headers }
+);
 
       if (!recentEventsRes.ok) {
         if (recentEventsRes.status === 401) {
