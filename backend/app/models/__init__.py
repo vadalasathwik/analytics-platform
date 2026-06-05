@@ -2,3 +2,4 @@ from app.models.user import User
 from app.models.organization import Organization
 from app.models.membership import Membership
 from app.models.event import Event
+from app.models.api_key import ApiKey

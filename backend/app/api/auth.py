@@ -155,7 +155,6 @@ async def google_callback(
     )
 
     if not user:
-
         user = await create_user(
             db=db,
             name=name,
@@ -178,13 +177,13 @@ async def google_callback(
         }
     )
 
-    return {
-        "message": "Google login successful",
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "user": {
-            "name": user.name,
-            "email": user.email,
-            "auth_provider": user.auth_provider
-        }
-    }
+    frontend_url = (
+        f"http://localhost:3000/auth"
+        f"?access_token={access_token}"
+        f"&refresh_token={refresh_token}"
+    )
+
+    return RedirectResponse(
+        url=frontend_url,
+        status_code=302
+    )

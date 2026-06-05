@@ -82,11 +82,10 @@ export default function HomePage() {
 
         <button
           className="w-full border p-3 rounded mt-4"
-          onClick={() =>
-            alert(
-              "Google OAuth will be added next"
-            )
-          }
+          onClick={() => {
+  window.location.href =
+    "http://127.0.0.1:8000/auth/google/login";
+}}
         >
           Continue with Google
         </button>

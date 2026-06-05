@@ -15,11 +15,21 @@ from app.api.users import router as users_router
 from app.api.admin import router as admin_router
 from app.api.tenant import router as tenant_router
 from app.api.events import router as events_router
+from app.api.api_keys import (
+    router as api_keys_router
+)
+from app.api.track import (
+    router as track_router
+)
 
 app = FastAPI(
     title="Analytics Platform API"
 )
 
+
+
+app.include_router(track_router)
+app.include_router(api_keys_router)
 app.include_router(tenant_router)
 app.include_router(events_router)
 

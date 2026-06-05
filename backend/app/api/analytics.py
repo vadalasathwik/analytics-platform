@@ -5,16 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
 
-from app.services.analytics_service import (
-    get_summary
-)
-
 from app.services.organization_analytics_service import (
     organization_stats
-)
-router = APIRouter(
-    prefix="/analytics",
-    tags=["Analytics"]
 )
 
 from app.services.dashboard_service import (
@@ -23,11 +15,59 @@ from app.services.dashboard_service import (
     user_growth
 )
 
+from app.auth.current_organization import (
+    get_current_organization
+)
+
+from app.repositories.analytics_repository import (
+    get_summary,
+    get_top_events,
+    get_recent_events
+)
+
+router = APIRouter(
+    prefix="/analytics",
+    tags=["Analytics"]
+)
+
+
 @router.get("/summary")
 async def analytics_summary(
+    current_org=Depends(
+        get_current_organization
+    ),
     db: AsyncSession = Depends(get_db)
 ):
-    return await get_summary(db)
+    return await get_summary(
+        db,
+        current_org["organization_id"]
+    )
+
+
+@router.get("/top-events")
+async def top_events(
+    current_org=Depends(
+        get_current_organization
+    ),
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_top_events(
+        db,
+        current_org["organization_id"]
+    )
+
+
+@router.get("/recent-events")
+async def recent_events(
+    current_org=Depends(
+        get_current_organization
+    ),
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_recent_events(
+        db,
+        current_org["organization_id"]
+    )
 
 
 @router.get("/organizations")
@@ -35,10 +75,12 @@ async def analytics_organizations(
     db: AsyncSession = Depends(get_db)
 ):
     return await organization_stats(db)
-    
+
+
 @router.get("/activity")
 async def activity_feed():
-    return await get_recent_activity()    
+    return await get_recent_activity()
+
 
 @router.get("/revenue")
 async def revenue_data():
@@ -52,10 +94,15 @@ async def growth_data():
 
 @router.get("/dashboard")
 async def dashboard(
+    current_org=Depends(
+        get_current_organization
+    ),
     db: AsyncSession = Depends(get_db)
 ):
-
-    summary = await get_summary(db)
+    summary = await get_summary(
+        db,
+        current_org["organization_id"]
+    )
 
     return {
         "summary": summary,
