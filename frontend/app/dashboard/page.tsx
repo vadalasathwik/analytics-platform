@@ -20,12 +20,49 @@ export default function DashboardPage() {
 
   const [loadingState, setLoadingState] = useState<"idle" | "loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [creatingOrg, setCreatingOrg] = useState(false);
 
   function handleLogout() {
     localStorage.removeItem("access_token");
     localStorage.removeItem("refresh_token");
 
     window.location.href = "/";
+  }
+
+  async function handleCreateOrganization() {
+    setCreatingOrg(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const orgName = prompt("Enter organization name:");
+      
+      if (!orgName || !orgName.trim()) {
+        alert("Organization name is required");
+        setCreatingOrg(false);
+        return;
+      }
+
+      const response = await fetch(`${API_URL}/organizations/`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: orgName.trim() }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create organization: ${response.status}`);
+      }
+
+      // Reload dashboard after creating org
+      setLoadingState("idle");
+      setCreatingOrg(false);
+      window.location.reload();
+    } catch (err) {
+      console.error("Error creating organization:", err);
+      alert("Failed to create organization. Check console for details.");
+      setCreatingOrg(false);
+    }
   }
 
   useEffect(() => {
@@ -196,12 +233,29 @@ export default function DashboardPage() {
         <div className="max-w-2xl mx-auto bg-white p-6 rounded shadow">
           <h2 className="text-2xl font-bold mb-4">Dashboard Error</h2>
           <p className="text-red-600 mb-4">{errorMessage || "Failed to load dashboard."}</p>
-          <div className="text-sm text-gray-700 mb-2">
-            <strong>Selected org:</strong> {selectedOrg || "(none)"}
+          <div className="text-sm text-gray-700 mb-4">
+            <div className="mb-2">
+              <strong>Selected org:</strong> {selectedOrg || "(none)"}
+            </div>
+            <div>
+              <strong>Orgs count:</strong> {organizations?.length ?? 0}
+            </div>
           </div>
-          <div className="text-sm text-gray-700">
-            <strong>Orgs count:</strong> {organizations?.length ?? 0}
-          </div>
+          
+          {errorMessage === "No organizations found" && (
+            <div className="mt-6 pt-6 border-t">
+              <p className="text-gray-600 mb-4">
+                You don't have any organizations yet. Create one to get started!
+              </p>
+              <button
+                onClick={handleCreateOrganization}
+                disabled={creatingOrg}
+                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
+              >
+                {creatingOrg ? "Creating..." : "Create Organization"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );

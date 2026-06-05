@@ -10,6 +10,14 @@ from app.repositories.user_repository import (
     create_user
 )
 
+from app.repositories.organization_repository import (
+    create_organization
+)
+
+from app.repositories.membership_repository import (
+    create_membership
+)
+
 from app.auth.jwt_handler import (
     create_access_token,
     create_refresh_token
@@ -40,12 +48,26 @@ async def register_user(
     )
 
     user = await create_user(
-    db,
-    name,
-    email,
-    hashed_password,
-    "local"
-   )
+        db,
+        name,
+        email,
+        hashed_password,
+        "local"
+    )
+
+    # Create a default organization for the user
+    org = await create_organization(
+        db,
+        f"{name}'s Organization"
+    )
+
+    # Add user to organization as owner
+    await create_membership(
+        db,
+        user.id,
+        org.id,
+        "owner"
+    )
 
     return user
 

@@ -29,3 +29,20 @@ async def get_organizations(
     )
 
     return result.scalars().all()
+
+
+async def get_user_organizations(
+    db: AsyncSession,
+    user_id: str
+):
+    from app.models.membership import Membership
+    result = await db.execute(
+        select(Organization).join(
+            Membership,
+            Organization.id == Membership.organization_id
+        ).where(
+            Membership.user_id == user_id
+        )
+    )
+
+    return result.scalars().all()

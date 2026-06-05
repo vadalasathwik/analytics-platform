@@ -2,7 +2,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.organization_repository import (
     create_organization,
-    get_organizations
+    get_organizations,
+    get_user_organizations
 )
 
 
@@ -21,4 +22,14 @@ async def list_organizations(
 ):
     return await get_organizations(
         db
+    )
+
+
+async def list_user_organizations(
+    db: AsyncSession,
+    user_id: str
+):
+    return await get_user_organizations(
+        db,
+        user_id
     )

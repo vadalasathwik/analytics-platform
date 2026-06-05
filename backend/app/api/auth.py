@@ -154,13 +154,32 @@ async def google_callback(
         email
     )
 
+    is_new_user = False
     if not user:
+        is_new_user = True
         user = await create_user(
             db=db,
             name=name,
             email=email,
             password_hash="google_oauth",
             auth_provider="google"
+        )
+
+        # Create default organization for new user
+        from app.repositories.organization_repository import create_organization
+        from app.repositories.membership_repository import create_membership
+        
+        org = await create_organization(
+            db,
+            f"{name}'s Organization"
+        )
+        
+        # Add user to organization as owner
+        await create_membership(
+            db,
+            user.id,
+            org.id,
+            "owner"
         )
 
     access_token = create_access_token(
