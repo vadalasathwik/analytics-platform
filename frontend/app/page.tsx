@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import api from "@/lib/api";
+import api, { API_URL } from "@/lib/api";
 
 export default function HomePage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleLogin() {
+    setLoading(true);
+    setError("");
     try {
       const formData = new URLSearchParams();
 
@@ -36,9 +40,12 @@ export default function HomePage() {
       );
 
       window.location.href = "/dashboard";
-    } catch (error) {
-      console.error(error);
-      alert("Invalid credentials");
+    } catch (err: any) {
+      console.error(err);
+      const msg = err?.response?.data?.detail || err?.message || "Invalid credentials";
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -73,19 +80,21 @@ export default function HomePage() {
           }
         />
 
+        {error && <div className="text-red-600 mb-2">{error}</div>}
+
         <button
           onClick={handleLogin}
           className="w-full bg-blue-600 text-white p-3 rounded"
+          disabled={loading}
         >
-          Login
+          {loading ? "Signing in..." : "Login"}
         </button>
 
         <button
           className="w-full border p-3 rounded mt-4"
           onClick={() => {
-  window.location.href =
-    "https://analytics-platform-production-78b2.up.railway.app";
-}}
+            window.location.href = `${API_URL}/auth/google/login`;
+          }}
         >
           Continue with Google
         </button>

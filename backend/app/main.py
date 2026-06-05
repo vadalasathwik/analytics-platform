@@ -43,6 +43,8 @@ app.add_middleware(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        settings.FRONTEND_URL,
+        "https://analytics-platform-two.vercel.app",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],

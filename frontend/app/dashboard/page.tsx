@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import AuthGuard from "@/components/AuthGuard";
 import EventChart from "@/components/EventChart";
 import ActivityChart from "@/components/ActivityChart";
+import { API_URL } from "@/lib/api";
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState<any>(null);
@@ -37,12 +38,19 @@ useEffect(() => {
         Authorization: `Bearer ${token}`,
       };
 
-      const orgRes = await fetch(
-        "https://analytics-platform-production-78b2.up.railway.app",
-        {
-          headers,
+      const orgRes = await fetch(`${API_URL}/organizations/`, {
+        headers,
+      });
+
+      if (!orgRes.ok) {
+        if (orgRes.status === 401) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          window.location.href = "/login";
+          return;
         }
-      );
+        throw new Error(`Failed to load organizations: ${orgRes.status}`);
+      }
 
       const orgs = await orgRes.json();
 
@@ -53,20 +61,49 @@ useEffect(() => {
       setSelectedOrg(orgId);
 
       const summaryRes = await fetch(
-        `https://analytics-platform-production-78b2.up.railway.app`,
+        `${API_URL}/analytics/summary?organization_id=${orgId}`,
         { headers }
       );
+
+      if (!summaryRes.ok) {
+        if (summaryRes.status === 401) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          window.location.href = "/login";
+          return;
+        }
+        throw new Error(`Failed to load summary: ${summaryRes.status}`);
+      }
 
       const topEventsRes = await fetch(
-        `https://analytics-platform-production-78b2.up.railway.app`,
+        `${API_URL}/analytics/top-events?organization_id=${orgId}`,
         { headers }
       );
 
+      if (!topEventsRes.ok) {
+        if (topEventsRes.status === 401) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          window.location.href = "/login";
+          return;
+        }
+        throw new Error(`Failed to load top events: ${topEventsRes.status}`);
+      }
+
       const recentEventsRes = await fetch(
-        `https://analytics-platform-production-78b2.up.railway.app`,
-        { headers }
+        `${API_URL}/analytics/recent-events?organization_id=${orgId}`,
         { headers }
       );
+
+      if (!recentEventsRes.ok) {
+        if (recentEventsRes.status === 401) {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          window.location.href = "/login";
+          return;
+        }
+        throw new Error(`Failed to load recent events: ${recentEventsRes.status}`);
+      }
 
       const summaryData =
         await summaryRes.json();

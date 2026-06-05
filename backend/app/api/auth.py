@@ -178,12 +178,9 @@ async def google_callback(
     )
 
     frontend_url = (
-        f"http://localhost:3000/auth"
+        f"{settings.FRONTEND_URL}/auth"
         f"?access_token={access_token}"
         f"&refresh_token={refresh_token}"
     )
 
-    return RedirectResponse(
-        url=frontend_url,
-        status_code=302
-    )
+    return RedirectResponse(url=frontend_url, status_code=302)

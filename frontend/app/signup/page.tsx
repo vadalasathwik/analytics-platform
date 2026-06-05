@@ -7,8 +7,12 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSignup() {
+    setLoading(true);
+    setError("");
     try {
       await api.post("/auth/register", {
         name,
@@ -19,9 +23,13 @@ export default function SignupPage() {
       alert("Registration successful");
 
       window.location.href = "/login";
-    } catch (error) {
-      console.error(error);
-      alert("Registration failed");
+    } catch (err: any) {
+      console.error(err);
+      const msg =
+        err?.response?.data?.detail || err?.message || "Registration failed";
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -30,6 +38,10 @@ export default function SignupPage() {
       <h1 className="text-3xl font-bold">
         Sign Up
       </h1>
+
+      {error && (
+        <div className="text-red-600 mt-4">{error}</div>
+      )}
 
       <input
         className="border p-2 block mt-4"
@@ -56,8 +68,9 @@ export default function SignupPage() {
       <button
         onClick={handleSignup}
         className="bg-green-600 text-white px-4 py-2 mt-4"
+        disabled={loading}
       >
-        Sign Up
+        {loading ? "Signing up..." : "Sign Up"}
       </button>
     </div>
   );
