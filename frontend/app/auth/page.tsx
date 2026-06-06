@@ -17,11 +17,15 @@ export default function AuthPage() {
     const refreshToken =
       params.get("refresh_token");
 
+    console.log("OAuth callback: access_token query value:", accessToken);
+    console.log("OAuth callback: refresh_token query value:", refreshToken);
+
     if (accessToken) {
       localStorage.setItem(
         "access_token",
         accessToken
       );
+      console.log("OAuth callback: stored access_token in localStorage.");
     }
 
     if (refreshToken) {
@@ -29,6 +33,7 @@ export default function AuthPage() {
         "refresh_token",
         refreshToken
       );
+      console.log("OAuth callback: stored refresh_token in localStorage.");
     }
 
     router.push("/dashboard");

@@ -21,6 +21,7 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ):
     try:
+        print("Received token:", token)
         payload = jwt.decode(
             token,
             settings.SECRET_KEY,
@@ -35,7 +36,8 @@ async def get_current_user(
                 detail="Invalid token"
             )
 
-    except JWTError:
+    except JWTError as e:
+        print("Decode exception:", str(e))
         raise HTTPException(
             status_code=401,
             detail="Invalid token"

@@ -1,456 +1,114 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
-
+import api from "@/lib/api";
+import { AnalyticsSummary, EventRecord, TopEvent, UserProfile } from "@/lib/types";
 import AuthGuard from "@/components/AuthGuard";
-import EventChart from "@/components/EventChart";
-import ActivityChart from "@/components/ActivityChart";
-import { API_URL } from "@/lib/api";
+import Sidebar from "@/components/Sidebar";
+import TopNav from "@/components/TopNav";
+import StatCard from "@/components/StatCard";
+import TopEventsChart from "@/components/TopEventsChart";
+import EventsTable from "@/components/EventsTable";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import { getSelectedOrganizationId } from "@/lib/storage";
 
 export default function DashboardPage() {
-  const [summary, setSummary] = useState<any>({
-    total_events: 0,
-    total_api_keys: 0,
-  });
-  const [topEvents, setTopEvents] = useState<any[]>([]);
-  const [recentEvents, setRecentEvents] = useState<any[]>([]);
-
-  const [organizations, setOrganizations] = useState<any[]>([]);
-  const [selectedOrg, setSelectedOrg] = useState("");
-
-  const [loadingState, setLoadingState] = useState<"idle" | "loading" | "success" | "error">("loading");
-  const [errorMessage, setErrorMessage] = useState<string>("");
-  const [creatingOrg, setCreatingOrg] = useState(false);
-
-  function handleLogout() {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-
-    window.location.href = "/";
-  }
-
-  async function handleCreateOrganization() {
-    setCreatingOrg(true);
-    try {
-      const token = localStorage.getItem("access_token");
-      const orgName = prompt("Enter organization name:");
-      
-      if (!orgName || !orgName.trim()) {
-        alert("Organization name is required");
-        setCreatingOrg(false);
-        return;
-      }
-
-      const response = await fetch(`${API_URL}/organizations/`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name: orgName.trim() }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create organization: ${response.status}`);
-      }
-
-      // Reload dashboard after creating org
-      setLoadingState("idle");
-      setCreatingOrg(false);
-      window.location.reload();
-    } catch (err) {
-      console.error("Error creating organization:", err);
-      alert("Failed to create organization. Check console for details.");
-      setCreatingOrg(false);
-    }
-  }
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [topEvents, setTopEvents] = useState<TopEvent[]>([]);
+  const [recentEvents, setRecentEvents] = useState<EventRecord[]>([]);
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function loadDashboard() {
-      console.log("NEW DASHBOARD CODE LOADED");
-      setLoadingState("loading");
-      setErrorMessage("");
+      const orgId = getSelectedOrganizationId();
+      setSelectedOrgId(orgId);
+
+      if (!orgId) {
+        setError("Select an organization from the Organizations page before using dashboard.");
+        setLoading(false);
+        return;
+      }
 
       try {
-        const token = localStorage.getItem("access_token");
-        console.log("access_token exists:", !!token);
+        setLoading(true);
+        const [summaryRes, topEventsRes, recentEventsRes, userRes] = await Promise.all([
+          api.get<AnalyticsSummary>("/analytics/summary", {
+            params: { organization_id: orgId },
+          }),
+          api.get<TopEvent[]>("/analytics/top-events", {
+            params: { organization_id: orgId },
+          }),
+          api.get<EventRecord[]>("/analytics/recent-events", {
+            params: { organization_id: orgId },
+          }),
+          api.get<UserProfile>("/users/me"),
+        ]);
 
-        if (!token) {
-          setErrorMessage("No access_token found. Please login.");
-          setLoadingState("error");
-          return;
-        }
-
-        const headers = {
-          Authorization: `Bearer ${token}`,
-        };
-
-        // ORGANIZATIONS
-        const orgUrl = `${API_URL}/organizations/`;
-        console.log("Requesting organizations ->", orgUrl);
-        let orgRes: Response;
-        try {
-          orgRes = await fetch(orgUrl, { headers });
-          console.log("organizations status:", orgRes.status);
-        } catch (err) {
-          console.error("organizations fetch error:", err);
-          setErrorMessage("organization fetch failed: network error");
-          setLoadingState("error");
-          return;
-        }
-
-        let orgs: any[] = [];
-        try {
-          const orgText = await orgRes.text();
-          console.log("organizations response body:", orgText);
-          orgs = orgText ? JSON.parse(orgText) : [];
-        } catch (err) {
-          console.error("organizations JSON parse error:", err);
-          setErrorMessage("organization fetch failed: invalid JSON");
-          setLoadingState("error");
-          return;
-        }
-
-        if (!Array.isArray(orgs) || orgs.length === 0) {
-          setOrganizations([]);
-          setErrorMessage("No organizations found");
-          setLoadingState("error");
-          return;
-        }
-
-        setOrganizations(orgs);
-        const orgId = orgs[0].id;
-        setSelectedOrg(orgId);
-
-        // SUMMARY
-        const summaryUrl = `${API_URL}/analytics/summary?organization_id=${orgId}`;
-        console.log("Requesting summary ->", summaryUrl);
-        let summaryRes: Response;
-        try {
-          summaryRes = await fetch(summaryUrl, { headers });
-          console.log("summary status:", summaryRes.status);
-        } catch (err) {
-          console.error("summary fetch error:", err);
-          setErrorMessage("summary fetch failed: network error");
-          setLoadingState("error");
-          return;
-        }
-
-        let summaryData: any = null;
-        try {
-          const summaryText = await summaryRes.text();
-          console.log("summary response body:", summaryText);
-          summaryData = summaryText ? JSON.parse(summaryText) : null;
-        } catch (err) {
-          console.error("summary JSON parse error:", err);
-          setErrorMessage("summary fetch failed: invalid JSON");
-          setLoadingState("error");
-          return;
-        }
-
-        // TOP EVENTS
-        const topUrl = `${API_URL}/analytics/top-events?organization_id=${orgId}`;
-        console.log("Requesting top-events ->", topUrl);
-        let topRes: Response;
-        try {
-          topRes = await fetch(topUrl, { headers });
-          console.log("top-events status:", topRes.status);
-        } catch (err) {
-          console.error("top-events fetch error:", err);
-          setErrorMessage("top-events fetch failed: network error");
-          setLoadingState("error");
-          return;
-        }
-
-        let topEventsData: any[] = [];
-        try {
-          const topText = await topRes.text();
-          console.log("top-events response body:", topText);
-          topEventsData = topText ? JSON.parse(topText) : [];
-        } catch (err) {
-          console.error("top-events JSON parse error:", err);
-          setErrorMessage("top-events fetch failed: invalid JSON");
-          setLoadingState("error");
-          return;
-        }
-
-        // RECENT EVENTS
-        const recentUrl = `${API_URL}/analytics/recent-events?organization_id=${orgId}`;
-        console.log("Requesting recent-events ->", recentUrl);
-        let recentRes: Response;
-        try {
-          recentRes = await fetch(recentUrl, { headers });
-          console.log("recent-events status:", recentRes.status);
-        } catch (err) {
-          console.error("recent-events fetch error:", err);
-          setErrorMessage("recent-events fetch failed: network error");
-          setLoadingState("error");
-          return;
-        }
-
-        let recentEventsData: any[] = [];
-        try {
-          const recentText = await recentRes.text();
-          console.log("recent-events response body:", recentText);
-          recentEventsData = recentText ? JSON.parse(recentText) : [];
-        } catch (err) {
-          console.error("recent-events JSON parse error:", err);
-          setErrorMessage("recent-events fetch failed: invalid JSON");
-          setLoadingState("error");
-          return;
-        }
-
-        // set states
-        setSummary(summaryData);
-        setTopEvents(Array.isArray(topEventsData) ? topEventsData : []);
-        setRecentEvents(Array.isArray(recentEventsData) ? recentEventsData : []);
-
-        console.log("summaryData:", summaryData);
-        console.log("topEventsData count:", Array.isArray(topEventsData) ? topEventsData.length : 0);
-        console.log("recentEventsData count:", Array.isArray(recentEventsData) ? recentEventsData.length : 0);
-
-        setLoadingState("success");
+        setSummary(summaryRes.data);
+        setTopEvents(topEventsRes.data ?? []);
+        setRecentEvents(recentEventsRes.data ?? []);
+        setUser(userRes.data);
       } catch (err) {
-        console.error("Unexpected dashboard error:", err);
-        setErrorMessage("Unexpected error loading dashboard");
-        setLoadingState("error");
+        setError("Unable to load dashboard. Please refresh or log in again.");
+      } finally {
+        setLoading(false);
       }
     }
 
     loadDashboard();
   }, []);
-  if (loadingState === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-xl">
-        Loading Dashboard...
-      </div>
-    );
-  }
-
-  if (loadingState === "error") {
-    return (
-      <div className="min-h-screen p-8">
-        <div className="max-w-2xl mx-auto bg-white p-6 rounded shadow">
-          <h2 className="text-2xl font-bold mb-4">Dashboard Error</h2>
-          <p className="text-red-600 mb-4">{errorMessage || "Failed to load dashboard."}</p>
-          <div className="text-sm text-gray-700 mb-4">
-            <div className="mb-2">
-              <strong>Selected org:</strong> {selectedOrg || "(none)"}
-            </div>
-            <div>
-              <strong>Orgs count:</strong> {organizations?.length ?? 0}
-            </div>
-          </div>
-          
-          {errorMessage === "No organizations found" && (
-            <div className="mt-6 pt-6 border-t">
-              <p className="text-gray-600 mb-4">
-                You don't have any organizations yet. Create one to get started!
-              </p>
-              <button
-                onClick={handleCreateOrganization}
-                disabled={creatingOrg}
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
-              >
-                {creatingOrg ? "Creating..." : "Create Organization"}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <AuthGuard>
-      <main className="min-h-screen bg-gray-100 p-8">
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <TopNav userName={user?.name ?? "User"} />
+        <div className="mx-auto grid max-w-7xl gap-6 px-6 py-8 xl:grid-cols-[280px_1fr]">
+          <Sidebar activePath="/dashboard" />
 
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-bold">
-            Analytics Dashboard
-          </h1>
-          <button
-            onClick={handleLogout}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-          >
-            Logout
-          </button>
+          <main className="space-y-6">
+            <section className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm uppercase tracking-[0.24em] text-slate-500">Dashboard</p>
+                  <h1 className="mt-3 text-3xl font-semibold text-slate-900">Live analytics snapshot</h1>
+                </div>
+                <p className="text-sm text-slate-600">Insights refresh automatically when you load the page.</p>
+              </div>
+            </section>
+
+            {loading ? (
+              <LoadingSpinner />
+            ) : error ? (
+              <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-700">{error}</div>
+            ) : (
+              <>
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <StatCard label="Active users" value={summary?.total_users ?? 0} helpText="Users across all organizations" />
+                  <StatCard label="Organizations" value={summary?.total_organizations ?? 0} helpText="Connected tenants" />
+                  <StatCard label="Memberships" value={summary?.total_memberships ?? 0} helpText="Team memberships tracked" />
+                </div>
+
+                <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+                  <TopEventsChart data={topEvents} />
+
+                  <div className="grid gap-6">
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                      <h2 className="text-xl font-semibold text-slate-900">Recent events</h2>
+                      <p className="mt-2 text-sm text-slate-600">A quick view of the latest tracking activity.</p>
+                      <div className="mt-6">
+                        <EventsTable events={recentEvents.slice(0, 5)} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </main>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-
-          <div className="bg-white p-6 rounded shadow">
-            <h2 className="text-gray-500">
-              Total Events
-            </h2>
-
-            <p className="text-4xl font-bold mt-2">
-              {summary?.total_events ?? 0}
-            </p>
-          </div>
-
-          <div className="bg-white p-6 rounded shadow">
-            <h2 className="text-gray-500">
-              API Keys
-            </h2>
-
-            <p className="text-4xl font-bold mt-2">
-              {summary?.total_api_keys ?? 0}
-            </p>
-          </div>
-
-          <div className="bg-white p-6 rounded shadow">
-            <h2 className="text-gray-500">
-              Top Event
-            </h2>
-
-            <p className="text-xl font-bold mt-2">
-              {topEvents?.[0]?.event_name ??
-                "No Events"}
-            </p>
-          </div>
-
-          <div className="bg-white p-6 rounded shadow">
-            <h2 className="text-gray-500">
-              Recent Activity
-            </h2>
-
-            <p className="text-4xl font-bold mt-2">
-              {recentEvents.length}
-            </p>
-          </div>
-
-        </div>
-
-        {/* CHARTS */}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-
-          <EventChart
-            data={topEvents}
-          />
-
-          <ActivityChart
-            data={recentEvents}
-          />
-
-        </div>
-
-        {/* TOP EVENTS */}
-
-        <div className="bg-white p-6 rounded shadow mb-8">
-          <h2 className="text-2xl font-bold mb-4">
-            Top Events
-          </h2>
-
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3">
-                  Event Name
-                </th>
-
-                <th className="text-left py-3">
-                  Count
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {topEvents.length > 0 ? (
-                topEvents.map(
-                  (event, index) => (
-                    <tr
-                      key={index}
-                      className="border-b"
-                    >
-                      <td className="py-3">
-                        {event.event_name}
-                      </td>
-
-                      <td className="py-3">
-                        {event.count}
-                      </td>
-                    </tr>
-                  )
-                )
-              ) : (
-                <tr>
-                  <td
-                    colSpan={2}
-                    className="py-4 text-center"
-                  >
-                    No events found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* RECENT EVENTS */}
-
-        <div className="bg-white p-6 rounded shadow">
-          <h2 className="text-2xl font-bold mb-4">
-            Recent Events
-          </h2>
-
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3">
-                  Event
-                </th>
-
-                <th className="text-left py-3">
-                  User
-                </th>
-
-                <th className="text-left py-3">
-                  Created At
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {recentEvents.length > 0 ? (
-                recentEvents.map(
-                  (event) => (
-                    <tr
-                      key={event.id}
-                      className="border-b"
-                    >
-                      <td className="py-3">
-                        {event.event_name}
-                      </td>
-
-                      <td className="py-3">
-                        {event.user_id}
-                      </td>
-
-                      <td className="py-3">
-                        {new Date(
-                          event.created_at
-                        ).toLocaleString()}
-                      </td>
-                    </tr>
-                  )
-                )
-              ) : (
-                <tr>
-                  <td
-                    colSpan={3}
-                    className="py-4 text-center"
-                  >
-                    No recent events
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-      </main>
+      </div>
     </AuthGuard>
   );
 }

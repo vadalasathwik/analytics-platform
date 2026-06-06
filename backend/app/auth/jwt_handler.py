@@ -16,6 +16,10 @@ def create_access_token(data: dict):
         {"exp": expire}
     )
 
+    print("JWT payload:", to_encode)
+    print("JWT secret:", settings.SECRET_KEY)
+    print("JWT algorithm:", settings.ALGORITHM)
+
     token = jwt.encode(
         to_encode,
         settings.SECRET_KEY,
