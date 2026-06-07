@@ -47,7 +47,12 @@ export default function DashboardPage() {
           api.get<UserProfile>("/users/me"),
         ]);
 
+        console.log("SUMMARY RESPONSE", summaryRes.data);
+        console.log("TOP EVENTS RESPONSE", topEventsRes.data);
+        console.log("RECENT EVENTS RESPONSE", recentEventsRes.data);
+
         setSummary(summaryRes.data);
+
         setTopEvents(topEventsRes.data ?? []);
         setRecentEvents(recentEventsRes.data ?? []);
         setUser(userRes.data);
@@ -61,6 +66,8 @@ export default function DashboardPage() {
     loadDashboard();
   }, []);
 
+
+  
   return (
     <AuthGuard>
       <div className="min-h-screen bg-slate-50 text-slate-900">

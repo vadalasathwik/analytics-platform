@@ -5,11 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.event import Event
 from app.models.api_key import ApiKey
+from app.models.membership import Membership
 
 
 async def get_summary(
     db: AsyncSession,
-    organization_id: str
+    organization_id: str,
+    user_id: str | None = None
 ):
     events_result = await db.execute(
         select(func.count(Event.id))
@@ -30,9 +32,41 @@ async def get_summary(
     total_events = events_result.scalar() or 0
     total_api_keys = api_keys_result.scalar() or 0
 
+    users_result = await db.execute(
+        select(func.count(func.distinct(Event.user_id)))
+        .where(
+            Event.organization_id ==
+            organization_id
+        )
+    )
+
+    memberships_result = await db.execute(
+        select(func.count(Membership.id))
+        .where(
+            Membership.organization_id ==
+            organization_id
+        )
+    )
+
+    total_users = users_result.scalar() or 0
+    total_memberships = memberships_result.scalar() or 0
+
+    total_organizations = 0
+    if user_id:
+        organizations_result = await db.execute(
+            select(func.count(func.distinct(Membership.organization_id)))
+            .where(
+                Membership.user_id == user_id
+            )
+        )
+        total_organizations = organizations_result.scalar() or 0
+
     return {
         "total_events": total_events,
-        "total_api_keys": total_api_keys
+        "total_api_keys": total_api_keys,
+        "total_users": total_users,
+        "total_organizations": total_organizations,
+        "total_memberships": total_memberships,
     }
 
 

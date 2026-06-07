@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -15,6 +16,12 @@ type TopEventsChartProps = {
 };
 
 export default function TopEventsChart({ data }: TopEventsChartProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   return (
     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="mb-5 flex items-center justify-between gap-4">
@@ -24,14 +31,16 @@ export default function TopEventsChart({ data }: TopEventsChartProps) {
         </div>
       </div>
       <div className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data.slice(0, 6)}>
-            <XAxis dataKey="event_name" tick={{ fontSize: 12 }} />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="count" fill="#0f172a" radius={[8, 8, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        {isMounted ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data.slice(0, 6)}>
+              <XAxis dataKey="event_name" tick={{ fontSize: 12 }} />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="count" fill="#0f172a" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : null}
       </div>
     </div>
   );

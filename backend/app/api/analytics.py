@@ -24,6 +24,7 @@ from app.repositories.analytics_repository import (
     get_top_events,
     get_recent_events
 )
+from app.schemas.analytics import AnalyticsSummary
 
 router = APIRouter(
     prefix="/analytics",
@@ -31,7 +32,7 @@ router = APIRouter(
 )
 
 
-@router.get("/summary")
+@router.get("/summary", response_model=AnalyticsSummary)
 async def analytics_summary(
     current_org=Depends(
         get_current_organization
@@ -40,7 +41,8 @@ async def analytics_summary(
 ):
     return await get_summary(
         db,
-        current_org["organization_id"]
+        current_org["organization_id"],
+        current_org["user"].id,
     )
 
 
@@ -101,7 +103,8 @@ async def dashboard(
 ):
     summary = await get_summary(
         db,
-        current_org["organization_id"]
+        current_org["organization_id"],
+        current_org["user"].id,
     )
 
     return {
