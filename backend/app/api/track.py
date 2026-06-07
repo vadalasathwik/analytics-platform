@@ -3,6 +3,7 @@ from fastapi import Header
 from fastapi import HTTPException
 from fastapi import Depends
 
+from app.core.rate_limiter import check_ingest_rate_limit
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
@@ -23,7 +24,7 @@ router = APIRouter(
 )
 
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(check_ingest_rate_limit)])
 async def track_event(
     event: EventCreate,
     x_api_key: str = Header(...),

@@ -3,6 +3,7 @@ from fastapi import Depends
 from fastapi import HTTPException
 
 from app.core.config import settings
+from app.core.rate_limiter import check_login_rate_limit
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -79,7 +80,7 @@ async def register(
     }
 
 
-@router.post("/login")
+@router.post("/login", dependencies=[Depends(check_login_rate_limit)])
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db)
