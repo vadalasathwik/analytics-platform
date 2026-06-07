@@ -8,4 +8,8 @@ ROLE_HIERARCHY = {
     ADMIN: 3,
     ANALYST: 2,
     VIEWER: 1,
+    "owner": 4,
+    "admin": 3,
+    "analyst": 2,
+    "viewer": 1,
 }

@@ -58,7 +58,7 @@ async def create_membership_route(
         )
 
     # If assigning Owner role, caller must be Owner themselves
-    if membership.role == OWNER and caller_membership.role != OWNER:
+    if membership.role.lower() == OWNER.lower() and caller_membership.role.lower() != OWNER.lower():
         raise HTTPException(
             status_code=403,
             detail="Only owners can assign the Owner role"
