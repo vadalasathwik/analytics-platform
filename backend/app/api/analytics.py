@@ -61,6 +61,10 @@ async def top_events(
 
 @router.get("/recent-events")
 async def recent_events(
+    page: int = 1,
+    limit: int = 20,
+    search: str | None = None,
+    event_name: str | None = None,
     current_org=Depends(
         get_current_organization
     ),
@@ -68,7 +72,11 @@ async def recent_events(
 ):
     return await get_recent_events(
         db,
-        current_org["organization_id"]
+        current_org["organization_id"],
+        page=page,
+        limit=limit,
+        search=search,
+        event_name=event_name
     )
 
 

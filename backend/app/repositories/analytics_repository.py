@@ -103,20 +103,47 @@ async def get_top_events(
     ]
 
 
+from sqlalchemy import String
+
 async def get_recent_events(
     db: AsyncSession,
-    organization_id: str
+    organization_id: str,
+    page: int = 1,
+    limit: int = 20,
+    search: str | None = None,
+    event_name: str | None = None
 ):
-    result = await db.execute(
-        select(Event)
-        .where(
-            Event.organization_id ==
-            organization_id
-        )
-        .order_by(
-            Event.created_at.desc()
-        )
-        .limit(20)
-    )
+    # Construct base query with tenant isolation
+    base_query = select(Event).where(Event.organization_id == organization_id)
 
-    return result.scalars().all()
+    # Apply event name filter
+    if event_name and event_name != "all":
+        base_query = base_query.where(Event.event_name == event_name)
+
+    # Apply search filter across event_name, user_id, and serialized properties JSON
+    if search:
+        search_pattern = f"%{search}%"
+        base_query = base_query.where(
+            Event.event_name.ilike(search_pattern) |
+            Event.user_id.ilike(search_pattern) |
+            Event.properties.cast(String).ilike(search_pattern)
+        )
+
+    # Get total count of matching records
+    total_result = await db.execute(
+        select(func.count()).select_from(base_query.subquery())
+    )
+    total = total_result.scalar() or 0
+
+    # Retrieve paginated items
+    result = await db.execute(
+        base_query.order_by(Event.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+    )
+    items = result.scalars().all()
+
+    return {
+        "items": items,
+        "total": total
+    }

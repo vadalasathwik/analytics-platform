@@ -12,37 +12,75 @@ import { getSelectedOrganizationId } from "@/lib/storage";
 
 export default function EventExplorerPage() {
   const [events, setEvents] = useState<EventRecord[]>([]);
+  const [totalEvents, setTotalEvents] = useState(0);
+  const [eventTypes, setEventTypes] = useState<string[]>([]);
   const [user, setUser] = useState<UserProfile | null>(null);
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const pageSize = 8;
 
+  // Debounce the search query to avoid excessive API requests
   useEffect(() => {
-    async function loadEvents() {
-      const orgId = getSelectedOrganizationId();
-      setSelectedOrgId(orgId);
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [query]);
 
-      if (!orgId) {
-        setError("Select an organization from the Organizations page before browsing events.");
-        setLoading(false);
-        return;
-      }
+  // Load organization metadata (user profile and event types) on mount
+  useEffect(() => {
+    const orgId = getSelectedOrganizationId();
+    setSelectedOrgId(orgId);
+    if (!orgId) {
+      setError("Select an organization from the Organizations page before browsing events.");
+      setLoading(false);
+      return;
+    }
 
+    async function loadOrgMetadata() {
       try {
-        setLoading(true);
-        const [eventsRes, userRes] = await Promise.all([
-          api.get<EventRecord[]>("/analytics/recent-events", {
+        const [userRes, topEventsRes] = await Promise.all([
+          api.get<UserProfile>("/users/me"),
+          api.get<Array<{ event_name: string }>>("/analytics/top-events", {
             params: { organization_id: orgId },
           }),
-          api.get<UserProfile>("/users/me"),
         ]);
-
-        setEvents(eventsRes.data ?? []);
         setUser(userRes.data);
+        const types = (topEventsRes.data ?? []).map((t) => t.event_name);
+        setEventTypes(Array.from(new Set(types)).sort());
+      } catch (err) {
+        console.error("Error loading metadata", err);
+      }
+    }
+
+    loadOrgMetadata();
+  }, [selectedOrgId]);
+
+  // Fetch paginated events from backend when page, search query, filter, or org changes
+  useEffect(() => {
+    const orgId = getSelectedOrganizationId();
+    if (!orgId) return;
+
+    async function fetchPagedEvents() {
+      try {
+        setLoading(true);
+        setError("");
+        const response = await api.get<{ items: EventRecord[]; total: number }>("/analytics/recent-events", {
+          params: {
+            organization_id: orgId,
+            page: page,
+            limit: pageSize,
+            search: debouncedQuery || undefined,
+            event_name: filter === "all" ? undefined : filter,
+          },
+        });
+        setEvents(response.data.items ?? []);
+        setTotalEvents(response.data.total ?? 0);
       } catch (err) {
         setError("Unable to load events.");
       } finally {
@@ -50,27 +88,12 @@ export default function EventExplorerPage() {
       }
     }
 
-    loadEvents();
-  }, []);
+    fetchPagedEvents();
+  }, [page, debouncedQuery, filter, selectedOrgId]);
 
-  const eventNames = useMemo(() => {
-    return Array.from(new Set(events.map((event) => event.event_name))).sort();
-  }, [events]);
-
-  const filteredEvents = useMemo(() => {
-    return events.filter((event) => {
-      const matchesQuery = query
-        ? event.event_name.toLowerCase().includes(query.toLowerCase()) ||
-          JSON.stringify(event.properties ?? {}).toLowerCase().includes(query.toLowerCase())
-        : true;
-
-      const matchesFilter = filter === "all" ? true : event.event_name === filter;
-      return matchesQuery && matchesFilter;
-    });
-  }, [events, query, filter]);
-
-  const pageCount = Math.max(1, Math.ceil(filteredEvents.length / pageSize));
-  const pagedEvents = filteredEvents.slice((page - 1) * pageSize, page * pageSize);
+  const eventNames = eventTypes;
+  const pageCount = Math.max(1, Math.ceil(totalEvents / pageSize));
+  const pagedEvents = events;
 
   return (
     <AuthGuard>
@@ -134,7 +157,7 @@ export default function EventExplorerPage() {
                 <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-sm text-slate-600">Showing {filteredEvents.length} events</p>
+                      <p className="text-sm text-slate-600">Showing {events.length} of {totalEvents} events</p>
                       <h2 className="text-xl font-semibold text-slate-900">Event results</h2>
                     </div>
                     <p className="text-sm text-slate-500">Page {page} of {pageCount}</p>
