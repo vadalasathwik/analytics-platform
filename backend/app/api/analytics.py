@@ -88,18 +88,33 @@ async def analytics_organizations(
 
 
 @router.get("/activity")
-async def activity_feed():
-    return await get_recent_activity()
+async def activity_feed(
+    current_org=Depends(
+        get_current_organization
+    ),
+    db: AsyncSession = Depends(get_db)
+):
+    return await get_recent_activity(db, current_org["organization_id"])
 
 
 @router.get("/revenue")
-async def revenue_data():
-    return await revenue_trends()
+async def revenue_data(
+    current_org=Depends(
+        get_current_organization
+    ),
+    db: AsyncSession = Depends(get_db)
+):
+    return await revenue_trends(db, current_org["organization_id"])
 
 
 @router.get("/growth")
-async def growth_data():
-    return await user_growth()
+async def growth_data(
+    current_org=Depends(
+        get_current_organization
+    ),
+    db: AsyncSession = Depends(get_db)
+):
+    return await user_growth(db, current_org["organization_id"])
 
 
 @router.get("/dashboard")
@@ -109,15 +124,16 @@ async def dashboard(
     ),
     db: AsyncSession = Depends(get_db)
 ):
+    org_id = current_org["organization_id"]
     summary = await get_summary(
         db,
-        current_org["organization_id"],
+        org_id,
         current_org["user"].id,
     )
 
     return {
         "summary": summary,
-        "revenue": await revenue_trends(),
-        "growth": await user_growth(),
-        "activity": await get_recent_activity()
+        "revenue": await revenue_trends(db, org_id),
+        "growth": await user_growth(db, org_id),
+        "activity": await get_recent_activity(db, org_id)
     }
