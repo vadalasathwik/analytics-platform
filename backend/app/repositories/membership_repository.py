@@ -34,19 +34,18 @@ async def get_memberships(
 
     return result.scalars().all()
 
-async def get_membership(
+
+async def get_organization_memberships(
     db: AsyncSession,
-    user_id: str,
     organization_id: str
 ):
     result = await db.execute(
         select(Membership).where(
-            Membership.user_id == user_id,
             Membership.organization_id == organization_id
         )
     )
 
-    return result.scalar_one_or_none()
+    return result.scalars().all()
 
 
 async def get_membership(
