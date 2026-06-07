@@ -38,3 +38,23 @@ async def get_events(
     )
 
     return result.scalars().all()
+
+
+async def create_events_batch(
+    db: AsyncSession,
+    organization_id: str,
+    events_data: list
+):
+    events = [
+        Event(
+            organization_id=organization_id,
+            event_name=item.event_name,
+            user_id=item.user_id,
+            properties=item.properties
+        )
+        for item in events_data
+    ]
+
+    db.add_all(events)
+    await db.commit()
+    return events
