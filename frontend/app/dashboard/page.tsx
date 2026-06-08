@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
@@ -41,7 +41,7 @@ export default function DashboardPage() {
           api.get<TopEvent[]>("/analytics/top-events", {
             params: { organization_id: orgId },
           }),
-          api.get<EventRecord[]>("/analytics/recent-events", {
+          api.get<{ items: EventRecord[]; total: number }>("/analytics/recent-events", {
             params: { organization_id: orgId },
           }),
           api.get<UserProfile>("/users/me"),
@@ -54,7 +54,7 @@ export default function DashboardPage() {
         setSummary(summaryRes.data);
 
         setTopEvents(topEventsRes.data ?? []);
-        setRecentEvents(recentEventsRes.data ?? []);
+        setRecentEvents(recentEventsRes.data.items ?? []);
         setUser(userRes.data);
       } catch (err) {
         setError("Unable to load dashboard. Please refresh or log in again.");
